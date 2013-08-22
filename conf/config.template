@@ -1,5 +1,5 @@
 # Setup container name
-lxc.utsname = lxc-{name}
+lxc.utsname = lxc-{anchor}
 
 # Max tty nums
 lxc.tty = 1
@@ -11,9 +11,9 @@ lxc.rootfs = /lxc/rootfs.squashfs
 lxc.network.type = veth
 lxc.network.flags = up
 lxc.network.name = eth0
-lxc.network.veth.pair = {veth}
+lxc.network.veth.pair = veth.{anchor}
 lxc.network.ipv4 = {ipaddr}/16
-lxc.network.script.up = /lxc/vethup.sh {veth} {ipaddr}
+lxc.network.script.up = /lxc/vethup.sh veth.{anchor} {ipaddr}
 lxc.network.ipv4.gateway = 10.10.255.254
 
 # Setup limits
