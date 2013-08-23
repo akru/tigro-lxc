@@ -43,7 +43,7 @@ class Creator(Thread):
     def createContainer(s, container):
 
         # Generate address for new container
-        container.ipaddr = s.genAddress(container.id)
+        container.address = s.genAddress(container.id)
 
         # Save address in session
         s._sess.add(container)
@@ -67,7 +67,7 @@ class Creator(Thread):
         os.makedirs(target)
         
         # Create config from template
-        config = s.template.format(anchor=anchor, ipaddr=container.ipaddr)
+        config = s.template.format(anchor=anchor, address=container.address)
 
         # Save config file
         file(os.path.join(target, 'config'), 'w').write(config)

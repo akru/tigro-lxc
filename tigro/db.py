@@ -67,3 +67,30 @@ class NewContainer(Base):
     ## Relationship link to container item
     link = Column(Integer, ForeignKey('container.id'))
 
+## Connection status table
+class Connection(Base):
+
+    ## Table name
+    __tablename__ = 'connection'
+
+    ## Primary key
+    id = Column(Integer, Sequence('connection_id_seq'), primary_key=True)
+
+    ## Relationship link to container item
+    container = Column(Integer, ForeignKey('container.id'))
+
+    ## Connection since string
+    since = Column(String)
+
+    ## Client virtual address
+    vaddress = Column(String)
+
+    ## Client real address
+    raddress = Column(String)
+
+    ## Bytes sended
+    sended = Column(Integer)
+
+    ## Bytes received
+    received = Column(Integer)
+

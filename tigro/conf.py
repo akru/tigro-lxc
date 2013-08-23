@@ -13,6 +13,9 @@ LXC_DIR = '/lxc'
 #  Template accept two arguments: anchor and ipaddr for new container.
 CONFIG_TEMPLATE = '{0}/config.template'.format(LXC_DIR)
 
+## OpenVPN status file, version 3
+OPENVPN_STATUS_FILE = '/run/openvpn.status'
+
 ## Database name
 DB_NAME = 'tigro'
 
