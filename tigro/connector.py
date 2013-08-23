@@ -4,7 +4,7 @@
 #
 #  This package makes firewall rules for LXC-containers.
 from pyinotify import WatchManager, Notifier, ProcessEvent, IN_MODIFY
-from db import Connection, DB_CONN_STRING
+from db import Connection, Robot, DB_CONN_STRING
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from parser import OpenVPNStatusParser
@@ -56,22 +56,93 @@ class Database:
         s._sess = s.Session()
 
         # Init empty table
-        a = s._sess.query(Connection).all()
-        if len(a) > 0:
-            s._sess.delete(a)
+        items = s._sess.query(Connection).all()
+        if len(items) > 0:
+            for i in items:
+                s._sess.delete(i)
             s._sess.commit()
 
+    ## Commit changes to database
+    def flush(s):
+
+        # Commit current session
+        s._sess.commit()
+
+    ## Insert new connected clients
     def insert(s, clients):
 
         # Insert to table all clients in list
-        for client in clients:
-            pass
+        for key in clients:
 
+            # Get robot by anchor
+            r = s._sess.query(Robot)\
+                            .join('container')\
+                            .filter(Robot.anchor==key)\
+                            .first()
+
+            if not r:
+                # robot doesn't exist - skip
+                # TODO: logging
+                continue
+
+            # Create connection row
+            item = Connection(
+                since=clients[key]['Connected Since'],
+                vaddress=clients[key]['Virtual Address'],
+                raddress=clients[key]['Real Address'],
+                sent=int(clients[key]['Bytes Sent']),
+                received=int(clients[key]['Bytes Received']),
+                container=r.container.id
+            )
+
+            # Add new item to session
+            s._sess.add(item)
+
+    ## Drop disconnected clients
     def drop(s, clients):
-        pass
 
+        # Drop all clients in list
+        for key in clients:
+
+            # Select connection by source IP
+            c = s._sess.query(Connection).filter(
+                    Connection.raddress == clients[key]['Real Address']
+                ).first()
+
+            if not c:
+                # nothing to drop - skip
+                continue
+
+            # Drop item
+            s._sess.delete(c)
+
+    ## Update client connection
     def update(s, clients):
-        pass
+
+        # Decomposition of clients
+        before, after = clients
+
+        # Drop all clients in list
+        for key in before:
+
+            # Select connection by source IP
+            c = s._sess.query(Connection).filter(
+                    Connection.raddress == before[key]['Real Address']
+                ).first()
+
+            if not c:
+                # nothing to change - skip
+                continue
+
+            # Update columns
+            c.since = after[key]['Connected Since']
+            c.vaddress = after[key]['Virtual Address']
+            c.raddress = after[key]['Real Address']
+            c.sent = int(after[key]['Bytes Sent'])
+            c.received=int(after[key]['Bytes Received'])
+
+            # Update connection information
+            s._sess.add(c)
 
 ## Container connector thread
 #
@@ -130,6 +201,7 @@ class Connector(Thread):
         s.db.insert(diff.added)
         s.db.drop(diff.removed)
         s.db.update(diff.changed)
+        s.db.flush()
 
         # Replace status by new
         s.clients = status.connected_clients

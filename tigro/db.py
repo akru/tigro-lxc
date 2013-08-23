@@ -5,6 +5,7 @@
 #  This package provide declarative tables for working with TIGRO database.
 from sqlalchemy import Column, Integer, String, Sequence, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from conf import DB_DRIVER, DB_USER, DB_PASSWORD, DB_HOST, DB_NAME 
 
 ## Database connection string
@@ -43,6 +44,9 @@ class Robot(Base):
     ## Web-socket auth string
     wsauth = Column(String)
 
+    ## Relationship link to container
+    container = relationship("Container", uselist=False)
+
 ## LXC-container table
 class Container(Base):
 
@@ -54,6 +58,12 @@ class Container(Base):
 
     ## Relationship link to robot item
     robot = Column(Integer, ForeignKey('robot.id'))
+
+    ## Container IP address
+    address = Column(String)
+
+    ## Relationship link to connection
+    connection = relationship("Connection")
 
 ## New LXC-container table
 class NewContainer(Base):
@@ -88,8 +98,8 @@ class Connection(Base):
     ## Client real address
     raddress = Column(String)
 
-    ## Bytes sended
-    sended = Column(Integer)
+    ## Bytes sent
+    sent = Column(Integer)
 
     ## Bytes received
     received = Column(Integer)
