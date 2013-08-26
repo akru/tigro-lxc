@@ -11,14 +11,16 @@ from parser import OpenVPNStatusParser
 from conf import OPENVPN_STATUS_FILE
 from dictdiffer import DictDiffer
 from threading import Thread
-import time
+import time, logging
 
 ## Firewall controller class
 class Firewall:
 
     ## The constructor
-    def __init__(s):
-        pass
+    def __init__(s, logger):
+
+        # Save logger
+        s.log = logger
 
     ## Firewall rule creator method
     def createRules(s, clients):
@@ -27,7 +29,7 @@ class Firewall:
             # nothing to create
             return
 
-        print "Create rules for:", clients
+        s.log.info("Create rules for: {0}".format(clients))
 
     ## Firewall rule remover method
     def deleteRules(s, clients):
@@ -36,7 +38,7 @@ class Firewall:
             # nothing to delete
             return
 
-        print "Delete rules for:", clients
+        s.log.info("Delete rules for: {0}".format(clients))
 
 ## Database connector
 #
@@ -50,17 +52,23 @@ class Database:
     Session = sessionmaker(bind=db)
 
     ## The constructor
-    def __init__(s):
+    def __init__(s, logger):
+
+        # Save logger
+        s.log = logger
 
         # Create new database connection session
         s._sess = s.Session()
 
         # Init empty table
+        s.log.debug('Start init connection table')
         items = s._sess.query(Connection).all()
         if len(items) > 0:
             for i in items:
                 s._sess.delete(i)
+                s.log.debug('Drop connection from {0}'.format(i.raddress))
             s._sess.commit()
+        s.log.debug('Connection table crear')
 
     ## Commit changes to database
     def flush(s):
@@ -82,11 +90,11 @@ class Database:
 
             if not r:
                 # robot doesn't exist - skip
-                # TODO: logging
+                s.log.critical('Robot {0} does NOT exist'.format(key))
                 continue
 
             # Create connection row
-            item = Connection(
+            c = Connection(
                 since=clients[key]['Connected Since'],
                 vaddress=clients[key]['Virtual Address'],
                 raddress=clients[key]['Real Address'],
@@ -96,7 +104,9 @@ class Database:
             )
 
             # Add new item to session
-            s._sess.add(item)
+            s.log.info('Append new connection: {0} -> {1}'
+                            .format(c.raddress, c.vaddress))
+            s._sess.add(c)
 
     ## Drop disconnected clients
     def drop(s, clients):
@@ -114,6 +124,7 @@ class Database:
                 continue
 
             # Drop item
+            s.log.info('Delete connection from {0}'.format(c.raddress))
             s._sess.delete(c)
 
     ## Update client connection
@@ -142,6 +153,8 @@ class Database:
             c.received=int(after[key]['Bytes Received'])
 
             # Update connection information
+            s.log.info('Update connection stats: {0} -> {1}'
+                            .format(c.raddress, c.vaddress))
             s._sess.add(c)
 
 ## Container connector thread
@@ -158,11 +171,14 @@ class Connector(Thread):
     def __init__(s):
         Thread.__init__(s)
 
+        # Init logger
+        s.log = logging.getLogger('Connector-{0}'.format(s.name))
+
         # Init firewall tables
-        s.f = Firewall()
+        s.f = Firewall(s.log)
 
         # Init database connection status table
-        s.db = Database()
+        s.db = Database(s.log)
 
         # Make inotify watcher
         wm = WatchManager()
