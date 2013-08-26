@@ -6,7 +6,7 @@
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from db import DB_CONN_STRING, Container, NewContainer, Robot
-from conf import CONFIG_TEMPLATE, LXC_DIR
+from conf import CONFIG_TEMPLATE, ADDRESS_TEMPLATE, LXC_DIR
 from threading import Thread
 import time, os, logging 
 
@@ -40,7 +40,7 @@ class Creator(Thread):
         # Only two bytes for /16 network, one address reserved for server
         assert (ident < 65535 - 1)
         # Address generates by id as high and low bytes.
-        return '10.10.{0}.{1}'.format(ident / 255, ident % 255)
+        return ADDRESS_TEMPLATE.format(ident / 255, ident % 255)
 
     ## Container creation method
     def createContainer(s, robot):

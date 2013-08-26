@@ -1,8 +1,8 @@
 #!/bin/sh
 # Virtual ethernet configuration script
-#  USAGE: vethup.sh [ veth name ] [ vm address ]
+#  USAGE: vethup.sh [ veth name ] [ vm address ] [ gw address ]
 #
 
-ifconfig $1 10.10.255.254/16
+ifconfig $1 $3
 ip route add $2 dev $1
 

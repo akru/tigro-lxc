@@ -13,6 +13,12 @@ LXC_DIR = '/lxc'
 #  Template accept two arguments: anchor and ipaddr for new container.
 CONFIG_TEMPLATE = '{0}/config.template'.format(LXC_DIR)
 
+## LXC-container IP-address template
+ADDRESS_TEMPLATE = '10.10.{0}.{1}'
+
+## LXC-container gateway address
+GATEWAY_ADDRESS = '10.10.255.254/16'
+
 ## OpenVPN status file, version 3
 OPENVPN_STATUS_FILE = '/run/openvpn.status'
 
