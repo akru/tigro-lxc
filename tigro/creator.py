@@ -5,10 +5,10 @@
 #  This package makes new containers.
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from threading import Thread
+from db import DB_CONN_STRING, Container, NewContainer, Robot
 from conf import CONFIG_TEMPLATE, LXC_DIR
-from db import *
-import time, os
+from threading import Thread
+import time, os, logging
 
 ## Container creator thread
 #
@@ -40,37 +40,33 @@ class Creator(Thread):
         return '10.10.{0}.{1}'.format(ident / 255, ident % 255)
 
     ## Container creation method
-    def createContainer(s, container):
+    def createContainer(s, robot):
 
         # Generate address for new container
-        container.address = s.genAddress(container.id)
+        robot.container.address = s.genAddress(robot.container.id)
+        logging.debug('Gen address {0}'.format(robot.container.address))
 
         # Save address in session
-        s._sess.add(container)
+        s._sess.add(robot.container)
         s._sess.commit()
 
-        # Get robot anchor
-        anchor = s._sess.query(Robot.anchor
-                        ).filter_by(id=container.robot).first()
-
-        if not anchor:
-            # robot doesn't exist =(
-            # TODO: maybe exception
-            return None
-
-        else:
-            # get anchor string from tuple
-            anchor = anchor[0]
-
         # Create target directory
-        target = os.path.join(LXC_DIR, anchor)
-        os.makedirs(target)
+        target = os.path.join(LXC_DIR, robot.anchor)
+        try:
+            os.makedirs(target)
+            logging.debug('Created directory \'{0}\''.format(target))
+
+        except OSError as e:
+            logging.critical('Cannot create directory: {0}'.format(e))
         
         # Create config from template
-        config = s.template.format(anchor=anchor, address=container.address)
+        config = s.template.format(anchor=robot.anchor, address=robot.container.address)
+        logging.debug('Gen config with anchor={0} and address={1}'
+                        .format(robot.anchor, robot.container.address))
 
         # Save config file
         file(os.path.join(target, 'config'), 'w').write(config)
+        logging.debug('Saved config file')
 
     ## Get task from database method
     def getWork(s):
@@ -84,13 +80,17 @@ class Creator(Thread):
 
         # Save container link
         link = work.link
+        logging.debug('New task: conatiner.id={0}'.format(link))
 
         # Drop work from queue
         s._sess.delete(work)
         s._sess.commit()
 
-        # Return container from link or None if doesn't exist
-        return s._sess.query(Container).filter_by(id=link).first()
+        # Return robot from link or None if doesn't exist
+        robot = s._sess.query(Robot)\
+                    .join('container')\
+                    .filter(Container.id == link).first()
+        return robot
 
     ## Main cycle
     def run(s):
@@ -98,12 +98,13 @@ class Creator(Thread):
         # Infinity cycle =)
         while True:
 
-            # Get container for creation task
-            container = s.getWork()
+            # Get robot for creation task
+            robot = s.getWork()
 
-            if container:
+            if robot:
                 # task exist - do create container
-                s.createContainer(container)
+                s.createContainer(robot)
+                logging.info('Container for robot {0} created'.format(robot.anchor))
 
             else:
                 # waiting for other tasks
