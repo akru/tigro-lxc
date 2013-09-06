@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 ## @package tigro
 #  Tele-op Interface Gateway for Robot Operation system
 #

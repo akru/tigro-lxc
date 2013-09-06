@@ -3,15 +3,7 @@
 #  OpenVPN connection status.
 #
 #  This package exports information about OpenVPN connections to database.
-from db import Connection, Robot, DB_CONN_STRING
-from netfilter.rule import Rule, Match, Target
-from netfilter.table import Table
-from parser import OpenVPNStatusParser
-from conf import OPENVPN_STATUS_FILE, GATEWAY_ADDRESS
-from dictdiffer import DictDiffer
-from subprocess import Popen
-from threading import Thread
-import time, logging
+from db import Connection, Robot
 
 ## Connection status class 
 #

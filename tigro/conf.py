@@ -4,6 +4,9 @@
 #
 #  This file contain some configuration details.
 
+## DNS daemon config file
+DNSD_CONFIG = '/etc/dnsd.conf'
+
 ## LXC-containers directory
 LXC_DIR = '/lxc'
 

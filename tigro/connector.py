@@ -14,6 +14,7 @@ from dictdiffer import DictDiffer
 from firewall import Firewall
 from subprocess import Popen
 from threading import Thread
+from dnsd import DNSDaemon
 import time, logging
 
 ## Container connector thread
@@ -44,6 +45,9 @@ class Connector(Thread):
 
         # Init firewall tables
         s.f = Firewall(s.log, sess)
+
+        # Init DNS daemon
+        s.dns = DNSDaemon(s.log, sess)
 
         # Init database connection status table
         s.connections = ConnectionStatus(s.log, sess, node)
@@ -80,6 +84,15 @@ class Connector(Thread):
 
         # Delete old firewall rules
         s.f.deleteRules(diff.removed)
+
+        # Create new DNS records
+        s.dns.append(diff.added)
+
+        # Delete old DNS records
+        s.dns.delete(diff.removed)
+
+        # Restart DNS daemon
+        s.dns.restart()
 
         # Update database records
         s.connections.append(diff.added)
