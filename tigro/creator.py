@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from db import DB_CONN_STRING, Container, NewContainer, Robot
 from conf import CONFIG_TEMPLATE, ADDRESS_TEMPLATE, LXC_DIR
 from threading import Thread
-import time, os, logging 
+import time, os, logging
 
 ## Container creator thread
 #
@@ -26,7 +26,7 @@ class Creator(Thread):
     template = file(CONFIG_TEMPLATE).read()
 
     ## The constructor
-    def __init__(s):
+    def __init__(s, node):
         Thread.__init__(s)
 
         # Init logger
@@ -34,6 +34,12 @@ class Creator(Thread):
         
         # Create new database connection session
         s._sess = s.Session()
+
+        # Host node where creator runs
+        s.node = node
+
+        # Count containers on node
+        s.count = len(node.containers)
 
     ## Container IP generation method
     def genAddress(s, ident):
@@ -49,7 +55,11 @@ class Creator(Thread):
         robot.container.address = s.genAddress(robot.container.id)
         s.log.debug('Gen address {0}'.format(robot.container.address))
 
-        # Save address in session
+        # Set node id
+        robot.container.node = s.node.id
+        s.log.debug('Append container to node {0}'.format(s.node.name))
+
+        # Commit changes
         s._sess.add(robot.container)
         s._sess.commit()
 
@@ -71,6 +81,9 @@ class Creator(Thread):
         file(os.path.join(target, 'config'), 'w').write(config)
         s.log.debug('Saved config file')
 
+        # Inc count of containers
+        s.count += 1
+
     ## Get task from database method
     def getWork(s):
 
@@ -90,10 +103,9 @@ class Creator(Thread):
         s._sess.commit()
 
         # Return robot from link or None if doesn't exist
-        robot = s._sess.query(Robot)\
+        return s._sess.query(Robot)\
                     .join('container')\
                     .filter(Container.id == link).first()
-        return robot
 
     ## Main cycle
     def run(s):
@@ -104,12 +116,12 @@ class Creator(Thread):
             # Get robot for creation task
             robot = s.getWork()
 
-            if robot:
+            if robot is not None:
                 # task exist - do create container
                 s.createContainer(robot)
                 s.log.info('Container for robot {0} created'.format(robot.anchor))
 
             else:
                 # waiting for other tasks
-                time.sleep(0.5)
+                time.sleep(0.5 + s.count)
 

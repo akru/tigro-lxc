@@ -17,6 +17,27 @@ DB_CONN_STRING = '{0}://{1}:{2}@{3}/{4}'.format(
 ## Declarative database synonym
 Base = declarative_base()
 
+## TIGRO-node server table
+class Node(Base):
+
+    ## Table name
+    __tablename__ = 'node'
+
+    ## Primary key
+    id = Column(Integer, Sequence('node_id_seq'), primary_key=True)
+
+    ## Node name
+    name = Column(String)
+
+    ## Node address
+    address = Column(String)
+
+    ## Relationship link to containers placed on
+    containers = relationship("Container")
+
+    ## Relationship link to containers placed on
+    connections = relationship("Connection")
+
 ## Robot table
 class Robot(Base):
 
@@ -35,7 +56,7 @@ class Robot(Base):
     ## Relationship link to user item
     owner = Column(Integer, ForeignKey('user.id'))
     
-    ## Plugins string TODO: maybe relationship
+    ## Plugins json string
     plugins = Column(String)
 
     ## Web-socket port
@@ -59,13 +80,16 @@ class Container(Base):
     ## Relationship link to robot item
     robot = Column(Integer, ForeignKey('robot.id'))
 
+    ## Relationship link to node item
+    node = Column(Integer, ForeignKey('node.id'))
+
     ## Container IP address
     address = Column(String)
 
     ## Relationship link to connection
     connection = relationship("Connection")
 
-## New LXC-container table
+## New LXC-container queue
 class NewContainer(Base):
 
     ## Table name
@@ -88,6 +112,9 @@ class Connection(Base):
 
     ## Relationship link to container item
     container = Column(Integer, ForeignKey('container.id'))
+
+    ## Relationship link to node item
+    node = Column(Integer, ForeignKey('node.id'))
 
     ## Connection since string
     since = Column(String)
