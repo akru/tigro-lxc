@@ -73,3 +73,11 @@ class HostNode(Thread):
             # Logging
             s.log.info('Started creator thread: {0}'.format(creator.name))
 
+        # Make connector
+        connector = Connector(s.node)
+
+        # Run connector thread
+        connector.start()
+
+        # Logging
+        s.log.info('Started connector thread: {0}'.format(connector.name))
