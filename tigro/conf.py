@@ -7,6 +7,9 @@
 ## DNS daemon config file
 DNSD_CONFIG = '/etc/dnsd.conf'
 
+## Start WebSocket port number
+WS_START_PORT = 7000
+
 ## LXC-containers directory
 LXC_DIR = '/lxc'
 

@@ -53,12 +53,6 @@ class Robot(Base):
     ## Anchor string
     anchor = Column(String)
 
-    ## Relationship link to user item
-    owner = Column(Integer, ForeignKey('user.id'))
-    
-    ## Plugins json string
-    plugins = Column(String)
-
     ## Web-socket port
     wsport = Column(Integer)
 
