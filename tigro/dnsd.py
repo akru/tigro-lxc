@@ -25,9 +25,6 @@ class DNSDaemon:
         # Init empty records list
         s.records = {}
         
-        # Start DNS daemon
-        s.daemon = Popen(['dnsd'])
-
         s._restart = False
 
     ## Append address to config
@@ -92,12 +89,9 @@ class DNSDaemon:
         config = s._gen_config()
 
         # Restart daemon
-        s.daemon.terminate()
-        s.daemon.wait()
-        s.log.debug('DNS daemon stoped')
-
-        s.daemon = Popen(['dnsd', '-c', config])
-        s.log.debug('DNS daemon started with config: {0}'.format(config))
+        dns = Popen(['/etc/init.d/dnsmasq', 'restart'])
+        dns.wait()
+        s.log.debug('DNS daemon restarted with hosts: {0}'.format(config))
 
     ## DNS config file generator
     def _gen_config(s):
@@ -109,15 +103,12 @@ class DNSDaemon:
         except OSError as e:
             s.log.critical('Can not open DNSD config file: {0}'.format(e))
 
-            # Open file in temporary directory
-            config = io.open('/tmp/dnsd.conf', 'w')
-        
         s.log.debug('DNS config open file: {0}'.format(config.name))
 
         # For any record from records
         for name in s.records:
             # Write formatted string
-            config.write(unicode('{0}  {1}\n'.format(name, s.records[name])))
+            config.write(unicode('{0}  {1}\n'.format(s.records[name], name)))
             s.log.debug('DNS config write item: {0}'.format(name))
 
         return config.name

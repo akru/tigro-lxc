@@ -4,12 +4,12 @@
 #
 #  This package makes firewall rules for LXC-containers.
 from pyinotify import WatchManager, Notifier, ProcessEvent, IN_MODIFY
+from conf import OPENVPN_STATUS_FILE, DHCP_LEASES_FILE
 from db import Connection, Robot, DB_CONN_STRING
 from connection import ConnectionStatus
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from parser import OpenVPNStatusParser
-from conf import OPENVPN_STATUS_FILE
 from dictdiffer import DictDiffer
 from firewall import Firewall
 from subprocess import Popen
@@ -76,8 +76,21 @@ class Connector(Thread):
         # Parse OpenVPN status file
         status = OpenVPNStatusParser(OPENVPN_STATUS_FILE)
 
+        # Parse DHCP daemon leases
+        status.concat_dhcp(DHCP_LEASES_FILE)
+
+        s.log.debug('Connected clients: {0}'.format(status.connected_clients.keys()))
+
+        # Filter clients where doesn not have IP address
+        clients = s.empty_va_filter(status.connected_clients)
+
+        s.log.debug('Filtered clients: {0}'.format(clients.keys()))
+
         # Get difference between old and new client lists
-        diff = DictDiffer(status.connected_clients, s.clients)
+        diff = DictDiffer(clients, s.clients)
+
+        s.log.debug('Clients added: {0}'.format(diff.added))
+        s.log.debug('Clients removed: {0}'.format(diff.removed))
 
         # Create new firewall rules
         s.f.createRules(diff.added)
@@ -90,9 +103,6 @@ class Connector(Thread):
 
         # Delete old DNS records
         s.dns.delete(diff.removed)
-
-        # Restart DNS daemon
-        s.dns.restart()
 
         # Update database records
         s.connections.append(diff.added)
@@ -114,8 +124,24 @@ class Connector(Thread):
             Popen(['lxc-stop', '--name', name]).wait()
             s.log.info('Stop container: {0}'.format(name))
 
+        # Restart DNS daemon (after all veth.* in status UP)
+        s.dns.restart()
+
         # Replace status by new
-        s.clients = status.connected_clients
+        s.clients = clients
+
+    ## Empty virtual address filter method
+    def empty_va_filter(s, clients):
+
+        # Filter clients where does not have IP
+        clients = filter(lambda x: len(x['Virtual Address']) > 0, clients.values())
+
+        # Format client list as dictionary
+        dict_clients = {}
+        for c in clients:
+            dict_clients[c['Common Name']] = c
+
+        return dict_clients
 
     ## Main cycle
     def run(s):

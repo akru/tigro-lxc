@@ -120,6 +120,22 @@ class OpenVPNStatusParser:
             self._parse_file()
         return self._routing_table
 
+    def concat_dhcp(self, leases):
+        """ Concatenate DHCP leases file """
+        dhcp_leases = {}
+
+        for item in open(leases, 'r'):
+            """ Parse string for example:
+            1378854745 26:94:e9:32:51:70 10.9.0.80 hostname ...
+            """
+            item = item.split(' ')
+            dhcp_leases[item[1]] = item[2]
+
+        for cn in self.routing_table:
+            mac = self.routing_table[cn]['Virtual Address']
+
+            if mac in dhcp_leases:
+                self._connected_clients[cn]['Virtual Address'] = dhcp_leases[mac]
 
 def main():
     if len(sys.argv) == 1:
@@ -129,6 +145,7 @@ def main():
 
     for file in files:
         parser = OpenVPNStatusParser(file)
+        parser.concat_dhcp('/var/lib/misc/dnsmasq.leases')
         print "="*79
         print file
         print "-"*79

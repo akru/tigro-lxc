@@ -5,7 +5,10 @@
 #  This file contain some configuration details.
 
 ## DNS daemon config file
-DNSD_CONFIG = '/etc/dnsd.conf'
+DNSD_CONFIG = '/etc/lxc-hosts'
+
+## DHCP leases file
+DHCP_LEASES_FILE = '/var/lib/misc/dnsmasq.leases'
 
 ## Start WebSocket port number
 WS_START_PORT = 7000
