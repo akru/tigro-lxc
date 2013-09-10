@@ -5,19 +5,14 @@
 #
 #  This script is a part of TIGRO project.
 #  Module contain classes and function for create and control LXC-containers.
-from tigro.connector import Connector
-from tigro.creator import Creator
+from tigro.hostnode import HostNode
 import logging
 
 logging.basicConfig(
         format = u'%(levelname)-8s [%(asctime)s] %(name)-15s > %(message)s',
-        level = logging.DEBUG)
+        level = logging.INFO)
 
 if __name__ == '__main__':
-    cn = Connector()
-    cn.start()
-
-    cr = Creator()
-    cr.start()
-
-    cn.join()
+    hn = HostNode()
+    hn.start()
+    hn.join()
