@@ -41,16 +41,16 @@ class Connector(Thread):
         s.log = logging.getLogger('Connector-{0}'.format(s.name))
 
         # Init new database session
-        sess = s.Session()
+        s._sess = s.Session()
 
         # Init firewall tables
-        s.f = Firewall(s.log, sess)
+        s.f = Firewall(s.log, s._sess)
 
         # Init DNS daemon
-        s.dns = DNSDaemon(s.log, sess)
+        s.dns = DNSDaemon(s.log, s._sess)
 
         # Init database connection status table
-        s.connections = ConnectionStatus(s.log, sess, node)
+        s.connections = ConnectionStatus(s.log, s._sess, node)
 
         # Make inotify watcher
         wm = WatchManager()
@@ -82,7 +82,13 @@ class Connector(Thread):
         s.log.debug('Connected clients: {0}'.format(status.connected_clients.keys()))
 
         # Filter clients where doesn not have IP address
-        clients = s.empty_va_filter(status.connected_clients)
+        clients = s.empty_va_filter(status.connected_clients.values())
+
+        # Filter clients where robot does not exist
+        clients = s.robot_exist_filter(clients)
+
+        # Conver client list to dictionary
+        clients = s.list_to_dict(clients)
 
         s.log.debug('Filtered clients: {0}'.format(clients.keys()))
 
@@ -134,7 +140,18 @@ class Connector(Thread):
     def empty_va_filter(s, clients):
 
         # Filter clients where does not have IP
-        clients = filter(lambda x: len(x['Virtual Address']) > 0, clients.values())
+        return filter(lambda x: len(x['Virtual Address']) > 0, clients)
+
+
+    ## Filter clients if robot does not exist
+    def robot_exist_filter(s, clients):
+
+        # Filter clients where does not have robot
+        return filter(lambda x: s._sess.query(Robot)\
+                        .filter_by(anchor=x['Common Name']).first(), clients)
+
+    ## Client list to dictionary converter
+    def list_to_dict(s, clients):
 
         # Format client list as dictionary
         dict_clients = {}
