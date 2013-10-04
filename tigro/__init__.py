@@ -5,7 +5,7 @@
 #  @author: Alexander Krupenkin<mail@akru.me>
 __docformat__ = 'doxygen en'
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __url__ = 'http://tigro.akru.me/project'
 __copyright__ = '(C) 2013 Alexander Krupenkin'
 __license__ = 'MIT'

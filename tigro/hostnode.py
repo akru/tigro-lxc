@@ -36,36 +36,36 @@ class HostNode(Thread):
         # Save count of creators
         s.creators = creators
 
+        # Save node name
+        s.nodename = nodename
+
         # Create database session
-        s._sess = s.Session()
+        sess = s.Session()
 
         # Get node by name
-        node = s._sess.query(Node).filter_by(name=nodename).first()
+        node = sess.query(Node).filter_by(name=nodename).first()
 
         if node is not None:
-            # node exist - save them
-            s.node = node
-
             # update IP address
-            s.node.address = s.address
+            node.address = s.address
 
         else:
-            s.node = Node(name=nodename, address=s.address)
+            node = Node(name=nodename, address=s.address)
 
         # Commit changes
-        s._sess.add(s.node)
-        s._sess.commit()
+        sess.add(node)
+        sess.commit()
 
     ## Main cycle
     def run(s):
 
-        s.log.info('Started host node {0} on {1}'.format(s.node.name, s.node.address))
+        s.log.info('Started host node {0} on {1}'.format(s.nodename, s.address))
 
         # Make some count of creator
         for i in range(0, s.creators):
 
             # Create instance
-            creator = Creator(s.node)
+            creator = Creator(s.nodename)
 
             # Run thread
             creator.start()
@@ -74,7 +74,7 @@ class HostNode(Thread):
             s.log.info('Started creator thread: {0}'.format(creator.name))
 
         # Make connector
-        connector = Connector(s.node)
+        connector = Connector(s.nodename)
 
         # Run connector thread
         connector.start()

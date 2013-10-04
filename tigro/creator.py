@@ -5,7 +5,7 @@
 #  This package makes new containers.
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from db import DB_CONN_STRING, Container, NewContainer, Robot
+from db import DB_CONN_STRING, Container, NewContainer, Robot, Node
 from conf import CONFIG_TEMPLATE, ADDRESS_TEMPLATE, LXC_DIR
 from threading import Thread
 import time, os, logging
@@ -26,20 +26,20 @@ class Creator(Thread):
     template = file(CONFIG_TEMPLATE).read()
 
     ## The constructor
-    def __init__(s, node):
+    def __init__(s, nodename):
         Thread.__init__(s)
 
         # Init logger
         s.log = logging.getLogger('Creator-{0}'.format(s.name))
-        
-        # Create new database connection session
-        s._sess = s.Session()
 
-        # Host node where creator runs
-        s.node = node
+        # Create new database connection session
+        sess = s.Session()
 
         # Count containers on node
-        s.count = len(node.containers)
+        s.count = len(sess.query(Node).\
+                        filter_by(name = nodename).\
+                        first().containers)
+        sess.close()
 
     ## Container IP generation method
     def genAddress(s, ident):
@@ -49,19 +49,27 @@ class Creator(Thread):
         return ADDRESS_TEMPLATE.format(ident / 255, ident % 255)
 
     ## Container creation method
-    def createContainer(s, robot):
+    def createContainer(s, robotid):
+
+        # Create new database connection session
+        sess = s.Session()
 
         # Generate address for new container
+        robot = sess.query(Robot)\
+                    .join('container')\
+                    .filter_by(id = robotid).first()
         robot.container.address = s.genAddress(robot.container.id)
         s.log.debug('Gen address {0}'.format(robot.container.address))
 
         # Set node id
-        robot.container.node = s.node.id
-        s.log.debug('Append container to node {0}'.format(s.node.name))
+        robot.container.node = sess.query(Container).\
+                        filter_by(id = robot.container.id).\
+                        first().node
+        s.log.debug('Append container to node {0}'.format(s.nodename))
 
         # Commit changes
-        s._sess.add(robot.container)
-        s._sess.commit()
+        sess.add(robot.container)
+        sess.commit()
 
         # Create target directory
         target = os.path.join(LXC_DIR, robot.anchor)
@@ -84,11 +92,17 @@ class Creator(Thread):
         # Inc count of containers
         s.count += 1
 
+        # Close database session
+        sess.close()
+
     ## Get task from database method
     def getWork(s):
 
+        # Create new database connection session
+        sess = s.Session()
+
         # Get one work from db
-        work = s._sess.query(NewContainer).first()
+        work = sess.query(NewContainer).first()
 
         if not work:
             # nothing to do
@@ -98,14 +112,29 @@ class Creator(Thread):
         link = work.link
         s.log.debug('New task: conatiner.id={0}'.format(link))
 
-        # Drop work from queue
-        s._sess.delete(work)
-        s._sess.commit()
+        # Drop work from queue safely
+        try:
+            sess.delete(work)
+            sess.commit()
+        except:
+            # Rollback the changes
+            sess.rollback()
+            # Close database session
+            sess.close()
+            return None
 
-        # Return robot from link or None if doesn't exist
-        return s._sess.query(Robot)\
+        # Return robot id from link or None if doesn't exist
+        robot = sess.query(Robot)\
                     .join('container')\
-                    .filter(Container.id == link).first()
+                    .filter_by(id = link).first()
+
+        # Close database session
+        sess.close()
+
+        if robot:
+            return int(robot.id)
+        else:
+            return None
 
     ## Main cycle
     def run(s):
@@ -123,5 +152,5 @@ class Creator(Thread):
 
             else:
                 # waiting for other tasks
-                time.sleep(0.5 + s.count)
+                time.sleep(5 + s.count)
 

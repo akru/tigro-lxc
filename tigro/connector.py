@@ -34,7 +34,7 @@ class Connector(Thread):
     clients = {}
 
     ## The constructor
-    def __init__(s, node):
+    def __init__(s, nodename):
         Thread.__init__(s)
 
         # Init logger
@@ -50,7 +50,7 @@ class Connector(Thread):
         s.dns = DNSDaemon(s.log, s._sess)
 
         # Init database connection status table
-        s.connections = ConnectionStatus(s.log, s._sess, node)
+        s.connections = ConnectionStatus(s.log, s._sess, nodename)
 
         # Make inotify watcher
         wm = WatchManager()

@@ -3,7 +3,7 @@
 #  OpenVPN connection status.
 #
 #  This package exports information about OpenVPN connections to database.
-from db import Connection, Robot
+from db import Connection, Robot, Node
 
 ## Connection status class 
 #
@@ -11,7 +11,7 @@ from db import Connection, Robot
 class ConnectionStatus:
 
     ## The constructor
-    def __init__(s, logger, session, node):
+    def __init__(s, logger, session, nodename):
 
         # Save logger
         s.log = logger
@@ -20,11 +20,11 @@ class ConnectionStatus:
         s.db = session
 
         # Save node id
-        s.node = node.id
+        s.nodeid = s.db.query(Node).filter_by(name = nodename).first().id
 
         # Init empty table
         s.log.debug('Init connection table')
-        items = s.db.query(Connection).filter_by(node = s.node).all()
+        items = s.db.query(Connection).filter_by(node = s.nodeid).all()
         if len(items) > 0:
             for i in items:
                 s.db.delete(i)
@@ -63,7 +63,7 @@ class ConnectionStatus:
                 sent      = int(clients[key]['Bytes Sent']),
                 received  = int(clients[key]['Bytes Received']),
                 container = r.container.id,
-                node      = s.node
+                node      = s.nodeid
             )
 
             # Add new item to session
