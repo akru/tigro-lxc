@@ -35,6 +35,9 @@ class Creator(Thread):
         # Create new database connection session
         sess = s.Session()
 
+        # Save node name
+        s.nodename = nodename
+
         # Count containers on node
         s.count = len(sess.query(Node).\
                         filter_by(name = nodename).\
@@ -148,7 +151,7 @@ class Creator(Thread):
             if robot is not None:
                 # task exist - do create container
                 s.createContainer(robot)
-                s.log.info('Container for robot {0} created'.format(robot.anchor))
+                s.log.info('Container for robot {0} created'.format(robot))
 
             else:
                 # waiting for other tasks
