@@ -70,8 +70,12 @@ class Connector(Thread):
         # Add OpenVPN status file watcher
         wm.watch_transient_file(OPENVPN_STATUS_FILE, IN_MODIFY, PUpdateStatus)
 
+        s._sess.close()
+
     ## Status updater method
     def updateStatus(s):
+        # Init new database session
+        s._sess = s.Session()
 
         # Parse OpenVPN status file
         status = OpenVPNStatusParser(OPENVPN_STATUS_FILE)
@@ -135,6 +139,8 @@ class Connector(Thread):
 
         # Replace status by new
         s.clients = clients
+
+        s._sess.close()
 
     ## Empty virtual address filter method
     def empty_va_filter(s, clients):

@@ -55,6 +55,7 @@ class HostNode(Thread):
         # Commit changes
         sess.add(node)
         sess.commit()
+        sess.close()
 
     ## Main cycle
     def run(s):

@@ -32,17 +32,17 @@ class Creator(Thread):
         # Init logger
         s.log = logging.getLogger('Creator-{0}'.format(s.name))
 
-        # Create new database connection session
-        sess = s.Session()
+        # Create new database connection s._session
+        s._sess = s.Session()
 
         # Save node name
         s.nodename = nodename
 
         # Count containers on node
-        s.count = len(sess.query(Node).\
+        s.count = len(s._sess.query(Node).\
                         filter_by(name = nodename).\
                         first().containers)
-        sess.close()
+        s._sess.close()
 
     ## Container IP generation method
     def genAddress(s, ident):
@@ -54,25 +54,22 @@ class Creator(Thread):
     ## Container creation method
     def createContainer(s, robotid):
 
-        # Create new database connection session
-        sess = s.Session()
-
         # Generate address for new container
-        robot = sess.query(Robot)\
+        robot = s._sess.query(Robot)\
                     .join('container')\
                     .filter_by(id = robotid).first()
         robot.container.address = s.genAddress(robot.container.id)
         s.log.debug('Gen address {0}'.format(robot.container.address))
 
         # Set node id
-        robot.container.node = sess.query(Container).\
+        robot.container.node = s._sess.query(Container).\
                         filter_by(id = robot.container.id).\
                         first().node
         s.log.debug('Append container to node {0}'.format(s.nodename))
 
         # Commit changes
-        sess.add(robot.container)
-        sess.commit()
+        s._sess.add(robot.container)
+        s._sess.commit()
 
         # Create target directory
         target = os.path.join(LXC_DIR, robot.anchor)
@@ -95,17 +92,11 @@ class Creator(Thread):
         # Inc count of containers
         s.count += 1
 
-        # Close database session
-        sess.close()
-
     ## Get task from database method
     def getWork(s):
 
-        # Create new database connection session
-        sess = s.Session()
-
         # Get one work from db
-        work = sess.query(NewContainer).first()
+        work = s._sess.query(NewContainer).first()
 
         if not work:
             # nothing to do
@@ -117,22 +108,16 @@ class Creator(Thread):
 
         # Drop work from queue safely
         try:
-            sess.delete(work)
-            sess.commit()
+            s._sess.delete(work)
+            s._sess.commit()
         except:
             # Rollback the changes
-            sess.rollback()
-            # Close database session
-            sess.close()
+            s._sess.rollback()
             return None
 
         # Return robot id from link or None if doesn't exist
-        robot = sess.query(Robot)\
-                    .join('container')\
+        robot = s._sess.query(Robot)\
                     .filter_by(id = link).first()
-
-        # Close database session
-        sess.close()
 
         if robot:
             return int(robot.id)
@@ -144,6 +129,8 @@ class Creator(Thread):
 
         # Infinity cycle =)
         while True:
+            # Create new database connection s._session
+            s._sess = s.Session()
 
             # Get robot for creation task
             robot = s.getWork()
@@ -155,5 +142,6 @@ class Creator(Thread):
 
             else:
                 # waiting for other tasks
+                s._sess.close()
                 time.sleep(5 + s.count)
 

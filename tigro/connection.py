@@ -18,6 +18,7 @@ class ConnectionStatus:
 
         # Save database connection session
         s.db = session
+        s.db_changed = False
 
         # Save node id
         s.nodeid = s.db.query(Node).filter_by(name = nodename).first().id
@@ -36,7 +37,9 @@ class ConnectionStatus:
     def commit(s):
 
         # Commit current session
-        s.db.commit()
+        if s.db_changed:
+            s.db.commit()
+            s.db_changed = False
 
     ## append new connected clients
     def append(s, clients):
@@ -70,6 +73,7 @@ class ConnectionStatus:
             s.log.info('Append new connection: {0} -> {1}'
                             .format(c.raddress, c.vaddress))
             s.db.add(c)
+            s.db_changed = True
 
     ## Delete disconnected clients
     def delete(s, clients):
@@ -89,6 +93,7 @@ class ConnectionStatus:
             # Drop item
             s.log.info('Delete connection from {0}'.format(c.raddress))
             s.db.delete(c)
+            s.db_changed = True
 
     ## Update client connection
     def update(s, clients):
@@ -119,4 +124,5 @@ class ConnectionStatus:
             s.log.debug('Update connection stats: {0} -> {1}'
                             .format(c.raddress, c.vaddress))
             s.db.add(c)
+            s.db_changed = True
 
