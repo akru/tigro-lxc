@@ -1,0 +1,27 @@
+#!/bin/bash
+
+EASY_RSA_DIR=/home/akru/easy-rsa
+
+# Make a certificate/private key pair using a locally generated
+# root certificate and create OpenVPN config tarrball.
+
+# Return if archive exist
+if [ -r $EASY_RSA_DIR/archive/$1.tgz ]; then 
+    exit 0
+fi
+
+cd $EASY_RSA_DIR
+
+source vars
+export EASY_RSA="${EASY_RSA:-.}"
+"$EASY_RSA/pkitool" $*
+
+mkdir /tmp/$1
+cp $EASY_RSA_DIR/config/* /tmp/$1
+cp $EASY_RSA_DIR/keys/$1.crt /tmp/$1/client.crt
+cp $EASY_RSA_DIR/keys/$1.key /tmp/$1/client.key
+
+cd /tmp
+tar czvf $EASY_RSA_DIR/archive/$1.tgz $1
+rm -rf $1
+

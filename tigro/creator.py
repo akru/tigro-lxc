@@ -62,9 +62,9 @@ class Creator(Thread):
         s.log.debug('Gen address {0}'.format(robot.container.address))
 
         # Set node id
-        robot.container.node = s._sess.query(Container).\
-                        filter_by(id = robot.container.id).\
-                        first().node
+        robot.container.node = s._sess.query(Node).\
+                        filter_by(name = s.nodename).\
+                        first().id
         s.log.debug('Append container to node {0}'.format(s.nodename))
 
         # Commit changes
